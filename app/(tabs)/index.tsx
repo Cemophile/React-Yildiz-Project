@@ -1,75 +1,137 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import React, { useState } from "react";
+import { Image, Pressable, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+const starImages = [
+  require("../../assets/red_star.png"),
+  require("../../assets/blue_star.png"),
+  require("../../assets/green_star.png"),
+  require("../../assets/orange_star.png"),
+  require("../../assets/purple_star.png"),
+];
 
-export default function HomeScreen() {
+const ROWS = 9;
+const COLS = 9;
+
+export default function App() {
+  const [stars, setStars] = useState<{ row: number; col: number; image: any }[]>([]);
+  const [gameOver, setGameOver] = useState(false);
+
+  const handleStart = () => {
+    if (gameOver) return;
+
+    // tüm hücreleri hesapla
+    const allPositions = Array.from({ length: ROWS * COLS }, (_, i) => {
+      const row = Math.floor(i / COLS);
+      const col = i % COLS;
+      return `${row},${col}`;
+    });
+
+    // dolu hücreler
+    const occupied = new Set(stars.map(s => `${s.row},${s.col}`));
+
+    // boş hücreler
+    const emptyPositions = allPositions.filter(p => !occupied.has(p));
+
+    if (emptyPositions.length < 3) {
+      setGameOver(true);
+      return;
+    }
+
+    const newStars = [...stars];
+    const used = new Set<string>();
+
+    while (used.size < 3) {
+      const randIdx = Math.floor(Math.random() * emptyPositions.length);
+      const pos = emptyPositions[randIdx];
+      if (used.has(pos)) continue;
+
+      used.add(pos);
+      const [row, col] = pos.split(",").map(Number);
+      const image = starImages[Math.floor(Math.random() * starImages.length)];
+      newStars.push({ row, col, image });
+    }
+
+    setStars(newStars);
+  };
+
+  const getStarImage = (row: number, col: number) => {
+    const star = stars.find(s => s.row === row && s.col === col);
+    return star ? <Image source={star.image} style={styles.image} /> : null;
+  };
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+    <View style={styles.container}>
+      {gameOver && <Text style={styles.gameOver}>Game Over!</Text>}
+
+      <View style={styles.grid}>
+        {Array.from({ length: ROWS }).map((_, row) => (
+          <View key={row} style={styles.row}>
+            {Array.from({ length: COLS }).map((_, col) => (
+              <TouchableOpacity
+                key={col}
+                style={styles.button}
+                onPress={() => console.log(`Tıklanan hücre: ${row}, ${col}`)}
+              >
+                {getStarImage(row, col)}
+              </TouchableOpacity>
+            ))}
+          </View>
+        ))}
+      </View>
+
+      {!gameOver && (
+        <Pressable style={styles.startButton} onPress={handleStart}>
+          <Text style={styles.startText}>Start</Text>
+        </Pressable>
+      )}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  container: {
+    flex: 1,
+    justifyContent: "flex-start",
+    alignItems: "center",
+    paddingTop: 160,
+    backgroundColor: "#fff",
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  grid: {
+    flexDirection: "column",
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  row: {
+    flexDirection: "row",
+  },
+  button: {
+    width: 35,
+    height: 35,
+    margin: 2,
+    backgroundColor: "#ccc",
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: 4,
+  },
+  image: {
+    width: 30,
+    height: 30,
+    resizeMode: "contain",
+  },
+  startButton: {
+    marginTop: 30,
+    backgroundColor: "#4682B4",
+    paddingHorizontal: 30,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  startText: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+  gameOver: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "red",
+    marginBottom: 20,
   },
 });
